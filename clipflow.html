@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipFlow — Auto-Schedule & Post Clips</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #181820;
+    --bg4: #1e1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f5;
+    --muted: #8888a0;
+    --dim: #555568;
+    --accent: #7c5cfc;
+    --accent2: #a78bfa;
+    --accent3: #c4b5fd;
+    --tiktok: #ff2d55;
+    --insta: #e1306c;
+    --youtube: #ff0000;
+    --success: #22d3a0;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+  .logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .logo-sub { font-size: 11px; color: var(--dim); margin-top: 2px; letter-spacing: 0.5px; }
+  nav { flex: 1; padding: 16px 10px; overflow-y: auto; }
+  .nav-label { font-size: 10px; letter-spacing: 1.5px; color: var(--dim); padding: 8px 10px 4px; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius);
+    font-size: 14px; color: var(--muted);
+    cursor: pointer; transition: all .15s;
+    margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(124,92,252,0.15); color: var(--accent2); }
+  .nav-item svg { flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto; background: var(--accent); color: #fff;
+    font-size: 10px; padding: 2px 6px; border-radius: 99px; font-weight: 600;
+  }
+  .sidebar-footer {
+    padding: 16px; border-top: 1px solid var(--border);
+  }
+  .user-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: var(--radius);
+    cursor: pointer; transition: background .15s;
+  }
+  .user-pill:hover { background: var(--bg3); }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #f472b6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-plan { font-size: 11px; color: var(--muted); }
+
+  /* ── Main ── */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    height: 60px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 16px;
+    flex: 1;
+  }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all .15s; border: 1px solid var(--border2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--text); background: var(--bg3); }
+  .btn-primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .btn-primary:hover { background: #6b4fe8; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  .btn-success { background: rgba(34,211,160,0.12); color: var(--success); border-color: rgba(34,211,160,0.25); }
+
+  .content { padding: 28px; flex: 1; }
+
+  /* ── Sections (views) ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── Upload Zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius-xl);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(124,92,252,0.05); }
+  .upload-icon {
+    width: 64px; height: 64px;
+    background: rgba(124,92,252,0.12);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    border: 1px solid rgba(124,92,252,0.25);
+  }
+  .upload-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .upload-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .upload-formats {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .fmt-tag {
+    padding: 4px 10px; border-radius: 99px;
+    background: var(--bg3); border: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); letter-spacing: 0.5px;
+  }
+  #fileInput { display: none; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .stat-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .stat-change { font-size: 12px; color: var(--success); margin-top: 4px; }
+
+  /* ── Video Queue ── */
+  .video-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .video-item:last-child { border-bottom: none; }
+  .video-thumb {
+    width: 72px; height: 40px;
+    border-radius: 6px; overflow: hidden;
+    background: var(--bg3); flex-shrink: 0;
+    position: relative; display: flex; align-items: center; justify-content: center;
+  }
+  .video-thumb-inner {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .play-overlay {
+    position: absolute;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .video-info { flex: 1; min-width: 0; }
+  .video-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .video-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .platform-dots { display: flex; gap: 4px; }
+  .pdot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .pdot-tt { background: var(--tiktok); }
+  .pdot-ig { background: var(--insta); }
+  .pdot-yt { background: var(--youtube); }
+
+  /* ── Status badges ── */
+  .badge {
+    padding: 3px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .badge-processing { background: rgba(245,158,11,0.12); color: var(--warn); border: 1px solid rgba(245,158,11,0.25); }
+  .badge-scheduled { background: rgba(124,92,252,0.12); color: var(--accent2); border: 1px solid rgba(124,92,252,0.25); }
+  .badge-posted { background: rgba(34,211,160,0.1); color: var(--success); border: 1px solid rgba(34,211,160,0.2); }
+  .badge-failed { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+  .badge-draft { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+
+  /* ── Progress ── */
+  .progress-track {
+    background: var(--bg3); border-radius: 99px; height: 6px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .4s ease;
+  }
+
+  /* ── Platform Toggles ── */
+  .platform-toggle-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .platform-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    cursor: pointer;
+    transition: all .15s;
+    font-size: 13px; color: var(--muted);
+    user-select: none;
+  }
+  .platform-toggle:hover { border-color: var(--border2); color: var(--text); }
+  .platform-toggle.active-tt { background: rgba(255,45,85,0.1); border-color: rgba(255,45,85,0.35); color: #ff6b8a; }
+  .platform-toggle.active-ig { background: rgba(225,48,108,0.1); border-color: rgba(225,48,108,0.35); color: #f06292; }
+  .platform-toggle.active-yt { background: rgba(255,0,0,0.08); border-color: rgba(255,0,0,0.3); color: #ff6b6b; }
+
+  /* ── Form Fields ── */
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .form-input {
+    width: 100%; background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    color: var(--text); font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border .15s;
+    outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--dim); }
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 7L11 1' stroke='%23555568' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  textarea.form-input { resize: vertical; min-height: 80px; }
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-info { flex: 1; }
+  .toggle-title { font-size: 14px; font-weight: 500; }
+  .toggle-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .toggle-switch {
+    position: relative; width: 40px; height: 22px; flex-shrink: 0;
+    cursor: pointer;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 99px; transition: all .2s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--muted); top: 2px; left: 2px;
+    transition: all .2s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: rgba(124,92,252,0.25); border-color: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider::before { background: var(--accent2); transform: translateX(18px); }
+
+  /* ── Account Connection Cards ── */
+  .account-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    margin-bottom: 10px;
+    transition: border .15s;
+  }
+  .account-card:hover { border-color: var(--border2); }
+  .platform-icon {
+    width: 38px; height: 38px; border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; flex-shrink: 0;
+  }
+  .pi-tt { background: rgba(255,45,85,0.12); color: var(--tiktok); }
+  .pi-ig { background: rgba(225,48,108,0.12); color: var(--insta); }
+  .pi-yt { background: rgba(255,0,0,0.08); color: var(--youtube); }
+  .account-info { flex: 1; }
+  .account-name { font-size: 14px; font-weight: 500; }
+  .account-handle { font-size: 12px; color: var(--muted); }
+  .conn-status {
+    font-size: 11px; padding: 4px 10px; border-radius: 99px;
+    font-weight: 500;
+  }
+  .conn-ok { background: rgba(34,211,160,0.1); color: var(--success); }
+  .conn-no { background: var(--bg4); color: var(--dim); }
+
+  /* ── Clip Cards ── */
+  .clip-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border .15s, transform .15s;
+    cursor: pointer;
+  }
+  .clip-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .clip-preview {
+    background: var(--bg3);
+    aspect-ratio: 9/16;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; position: relative;
+    overflow: hidden;
+  }
+  .clip-timeline {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 4px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  }
+  .clip-time { font-size: 10px; color: rgba(255,255,255,0.7); }
+  .clip-meta { padding: 12px; }
+  .clip-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .clip-score {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .score-bar {
+    flex: 1; height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden;
+  }
+  .score-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--success), #06d6a0);
+  }
+
+  /* ── Calendar ── */
+  .cal-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7,1fr); gap: 4px;
+  }
+  .cal-day-label {
+    text-align: center; font-size: 11px; color: var(--dim);
+    padding: 6px 0; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .cal-day {
+    aspect-ratio: 1; border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: 6px 4px; font-size: 12px; cursor: pointer;
+    transition: background .1s; position: relative;
+    background: var(--bg3); color: var(--muted);
+  }
+  .cal-day:hover { background: var(--bg4); color: var(--text); }
+  .cal-day.today { color: var(--accent2); font-weight: 600; border: 1px solid rgba(124,92,252,0.3); }
+  .cal-day.empty { background: transparent; cursor: default; }
+  .cal-day.has-posts { color: var(--text); }
+  .cal-dots { display: flex; gap: 2px; margin-top: auto; flex-wrap: wrap; justify-content: center; }
+  .cal-dot { width: 4px; height: 4px; border-radius: 50%; }
+
+  /* ── Analytics sparkline ── */
+  .sparkline { display: flex; align-items: flex-end; gap: 3px; height: 48px; }
+  .spark-bar {
+    flex: 1; border-radius: 3px 3px 0 0;
+    background: rgba(124,92,252,0.25);
+    transition: background .15s;
+    cursor: pointer; min-width: 0;
+  }
+  .spark-bar:hover { background: var(--accent); }
+  .spark-bar.peak { background: rgba(124,92,252,0.5); }
+
+  /* ── Processing overlay ── */
+  .processing-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  .processing-modal.show { display: flex; }
+  .processing-box {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius-xl); padding: 40px;
+    width: 440px; text-align: center;
+  }
+  .proc-spinner {
+    width: 56px; height: 56px;
+    border: 3px solid var(--bg3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .proc-step { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .proc-steps-list { margin-top: 20px; text-align: left; }
+  .proc-step-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    color: var(--dim);
+  }
+  .proc-step-item.done { color: var(--success); }
+  .proc-step-item.active { color: var(--text); }
+  .step-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; background: var(--bg3); border-radius: var(--radius); padding: 4px; width: fit-content; margin-bottom: 20px; }
+  .tab {
+    padding: 7px 16px; border-radius: 8px; font-size: 13px;
+    cursor: pointer; transition: all .15s; color: var(--muted);
+  }
+  .tab.active { background: var(--bg2); color: var(--text); border: 1px solid var(--border); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Table ── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left; font-size: 11px; color: var(--dim);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+  }
+  .data-table td { padding: 12px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
+
+  /* ── Sections spacing ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+  }
+  .section-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+
+  /* ── Range slider ── */
+  input[type=range] {
+    width: 100%; accent-color: var(--accent);
+    background: transparent; cursor: pointer;
+  }
+  .range-row { display: flex; align-items: center; gap: 12px; }
+  .range-val { font-size: 13px; font-weight: 600; color: var(--accent2); min-width: 32px; text-align: right; }
+
+  /* Notification dot */
+  .notif-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); margin-left: auto;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  .view.active { animation: fadeIn .2s ease; }
+
+  /* Mobile-friendly tweaks */
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">ClipFlow</div>
+    <div class="logo-sub">Creator Automation Studio</div>
+  </div>
+  <nav>
+    <div class="nav-label">Workspace</div>
+    <button class="nav-item active" onclick="showView('dashboard', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showView('upload', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload
+      <span class="nav-badge">2</span>
+    </button>
+    <button class="nav-item" onclick="showView('clips', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Clips
+    </button>
+    <button class="nav-item" onclick="showView('scheduler', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Scheduler
+    </button>
+    <button class="nav-item" onclick="showView('queue', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Post Queue
+    </button>
+
+    <div class="nav-label" style="margin-top:12px">Insights</div>
+    <button class="nav-item" onclick="showView('analytics', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </button>
+
+    <div class="nav-label" style="margin-top:12px">Config</div>
+    <button class="nav-item" onclick="showView('accounts', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Accounts
+    </button>
+    <button class="nav-item" onclick="showView('settings', this)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93L17.66 6.34A8 8 0 1017.66 17.66l1.41 1.41A10 10 0 100 12a10 10 0 0019.07-7.07z" style="display:none"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      Settings
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="avatar">JD</div>
+      <div>
+        <div class="user-name">Jake Doe</div>
+        <div class="user-plan">Pro Plan</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="page-title" id="pageTitle">Dashboard</div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </button>
+      <button class="btn btn-primary" onclick="showView('upload', document.querySelector('[onclick*=upload]'))">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Upload
+      </button>
+    </div>
+  </header>
+
+  <div class="content" id="mainContent">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="view active" id="view-dashboard">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Good morning, Jake 👋</div>
+          <div class="section-sub">You have 3 clips scheduled for today across 2 platforms</div>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Total Clips Generated</div>
+          <div class="stat-num">142</div>
+          <div class="stat-change">↑ 18 this week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Posts Scheduled</div>
+          <div class="stat-num">27</div>
+          <div class="stat-change" style="color:var(--accent2)">↑ 4 today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Views (7d)</div>
+          <div class="stat-num">94K</div>
+          <div class="stat-change">↑ 12% vs last week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Engagement</div>
+          <div class="stat-num">7.4%</div>
+          <div class="stat-change">↑ 0.8pp</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-title">
+              Recent Uploads
+              <button class="btn btn-ghost btn-sm" onclick="showView('upload', document.querySelector('[onclick*=upload]'))">+ Upload</button>
+            </div>
+            <div id="recentUploads">
+              <div class="video-item">
+                <div class="video-thumb">
+                  <div style="color:var(--dim);font-size:18px">▶</div>
+                  <div class="play-overlay">▶</div>
+                </div>
+                <div class="video-info">
+                  <div class="video-name">Podcast Episode 47 — AI Tools</div>
+                  <div class="video-meta">1:12:34 · 2.4 GB · MP4</div>
+                </div>
+                <div class="platform-dots">
+                  <span class="pdot pdot-tt"></span>
+                  <span class="pdot pdot-ig"></span>
+                  <span class="pdot pdot-yt"></span>
+                </div>
+                <span class="badge badge-processing">⚙ Processing</span>
+              </div>
+              <div class="video-item">
+                <div class="video-thumb">
+                  <div style="color:var(--dim);font-size:18px">▶</div>
+                </div>
+                <div class="video-info">
+                  <div class="video-name">Tutorial: React Hooks Deep Dive</div>
+                  <div class="video-meta">45:22 · 1.1 GB · MP4</div>
+                </div>
+                <div class="platform-dots">
+                  <span class="pdot pdot-tt"></span>
+                  <span class="pdot pdot-yt"></span>
+                </div>
+                <span class="badge badge-scheduled">● 6 Clips</span>
+              </div>
+              <div class="video-item">
+                <div class="video-thumb">
+                  <div style="color:var(--dim);font-size:18px">▶</div>
+                </div>
+                <div class="video-info">
+                  <div class="video-name">Startup Pitch Breakdown</div>
+                  <div class="video-meta">28:10 · 780 MB · MOV</div>
+                </div>
+                <div class="platform-dots">
+                  <span class="pdot pdot-ig"></span>
+                </div>
+                <span class="badge badge-posted">✓ Posted</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Posting Activity (Last 7 days)</div>
+            <div class="sparkline" id="sparkline"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+              <span style="font-size:11px;color:var(--dim)">Mon</span>
+              <span style="font-size:11px;color:var(--dim)">Tue</span>
+              <span style="font-size:11px;color:var(--dim)">Wed</span>
+              <span style="font-size:11px;color:var(--dim)">Thu</span>
+              <span style="font-size:11px;color:var(--dim)">Fri</span>
+              <span style="font-size:11px;color:var(--dim)">Sat</span>
+              <span style="font-size:11px;color:var(--dim)">Sun</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-title">Connected Accounts</div>
+            <div class="account-card">
+              <div class="platform-icon pi-tt">TT</div>
+              <div class="account-info">
+                <div class="account-name">TikTok</div>
+                <div class="account-handle">@jakedoe_creates</div>
+              </div>
+              <span class="conn-status conn-ok">● Live</span>
+            </div>
+            <div class="account-card">
+              <div class="platform-icon pi-ig">IG</div>
+              <div class="account-info">
+                <div class="account-name">Instagram</div>
+                <div class="account-handle">@jake.creates</div>
+              </div>
+              <span class="conn-status conn-ok">● Live</span>
+            </div>
+            <div class="account-card">
+              <div class="platform-icon pi-yt">YT</div>
+              <div class="account-info">
+                <div class="account-name">YouTube</div>
+                <div class="account-handle">@JakeDoeCreates</div>
+              </div>
+              <span class="conn-status conn-no">○ Connect</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Today's Queue</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
+                <div class="platform-icon pi-tt" style="width:28px;height:28px;font-size:12px">TT</div>
+                <div style="flex:1">
+                  <div style="font-size:13px">"AI will replace jobs..."</div>
+                  <div style="font-size:11px;color:var(--muted)">9:00 AM</div>
+                </div>
+                <span class="badge badge-scheduled">Queued</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
+                <div class="platform-icon pi-ig" style="width:28px;height:28px;font-size:12px">IG</div>
+                <div style="flex:1">
+                  <div style="font-size:13px">"3 React hooks you need"</div>
+                  <div style="font-size:11px;color:var(--muted)">1:00 PM</div>
+                </div>
+                <span class="badge badge-scheduled">Queued</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
+                <div class="platform-icon pi-tt" style="width:28px;height:28px;font-size:12px">TT</div>
+                <div style="flex:1">
+                  <div style="font-size:13px">"Hook frameworks that work"</div>
+                  <div style="font-size:11px;color:var(--muted)">6:30 PM</div>
+                </div>
+                <span class="badge badge-scheduled">Queued</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ UPLOAD ══ -->
+    <div class="view" id="view-upload">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Upload Long-Form Content</div>
+          <div class="section-sub">Upload a video and let ClipFlow automatically extract, edit, and schedule clips</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+            <div class="upload-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="upload-title">Drop your video here</div>
+            <div class="upload-sub">or click to browse files · Max 10 GB per upload</div>
+            <div class="upload-formats">
+              <span class="fmt-tag">MP4</span><span class="fmt-tag">MOV</span>
+              <span class="fmt-tag">AVI</span><span class="fmt-tag">MKV</span>
+              <span class="fmt-tag">WEBM</span><span class="fmt-tag">FLV</span>
+            </div>
+          </div>
+          <input type="file" id="fileInput" accept="video/*" onchange="handleFileSelect(event)">
+
+          <div class="card" style="margin-top:20px">
+            <div class="card-title">AI Clip Extraction Settings</div>
+
+            <div class="form-group">
+              <label class="form-label">Extraction Mode</label>
+              <select class="form-input form-select">
+                <option>Auto (AI picks best moments)</option>
+                <option>Highlights — High energy moments</option>
+                <option>Educational — Key insights & tips</option>
+                <option>Story arcs — Beginning / conflict / resolution</option>
+                <option>Custom — Define your own rules</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Target Clip Length</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                  <label class="form-label">Min (seconds)</label>
+                  <input class="form-input" type="number" value="30" min="5">
+                </div>
+                <div>
+                  <label class="form-label">Max (seconds)</label>
+                  <input class="form-input" type="number" value="90" max="600">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Number of Clips to Generate</label>
+              <div class="range-row">
+                <input type="range" min="1" max="20" value="5" oninput="document.getElementById('clipCount').textContent=this.value">
+                <span class="range-val" id="clipCount">5</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Output Aspect Ratio</label>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm active" style="border-color:var(--accent);color:var(--accent2)" id="ratio9">9:16 (Shorts/Reels)</button>
+                <button class="btn btn-ghost btn-sm" id="ratio1">1:1 (Square)</button>
+                <button class="btn btn-ghost btn-sm" id="ratio16">16:9 (Landscape)</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Auto Caption Style</label>
+              <select class="form-input form-select">
+                <option>Bold White (TikTok style)</option>
+                <option>Minimalist — Bottom bar</option>
+                <option>Highlight keywords</option>
+                <option>Word-by-word pop</option>
+                <option>No captions</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Caption Language</label>
+              <select class="form-input form-select">
+                <option>Auto-detect</option>
+                <option>English</option>
+                <option>Spanish</option>
+                <option>French</option>
+                <option>German</option>
+                <option>Portuguese</option>
+                <option>Japanese</option>
+                <option>Hindi</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">AI Enhancements</label>
+              <div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="toggle-title">Auto-remove silence</div>
+                    <div class="toggle-desc">Cut dead air and awkward pauses</div>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="toggle-title">Smart crop & reframe</div>
+                    <div class="toggle-desc">Keep subject centered in frame</div>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="toggle-title">Background music</div>
+                    <div class="toggle-desc">Add trending royalty-free music</div>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="toggle-title">Auto-generate title cards</div>
+                    <div class="toggle-desc">AI creates hook text overlays</div>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="toggle-title">Viral score ranking</div>
+                    <div class="toggle-desc">Rank clips by predicted engagement</div>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-title">Publish Settings</div>
+
+            <div class="form-group">
+              <label class="form-label">Target Platforms</label>
+              <div class="platform-toggle-row">
+                <div class="platform-toggle active-tt" id="tog-tt" onclick="togglePlatform(this,'tt')">
+                  <span>TT</span> TikTok
+                </div>
+                <div class="platform-toggle active-ig" id="tog-ig" onclick="togglePlatform(this,'ig')">
+                  <span>IG</span> Instagram
+                </div>
+                <div class="platform-toggle" id="tog-yt" onclick="togglePlatform(this,'yt')">
+                  <span>YT</span> YouTube
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Scheduling Mode</label>
+              <select class="form-input form-select">
+                <option>Smart schedule (AI best times)</option>
+                <option>Spread evenly over 7 days</option>
+                <option>Spread evenly over 14 days</option>
+                <option>Post immediately</option>
+                <option>Manual — I'll set each time</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Posts per Day (max)</label>
+              <div class="range-row">
+                <input type="range" min="1" max="10" value="3" oninput="document.getElementById('ppd').textContent=this.value">
+                <span class="range-val" id="ppd">3</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Default Caption Template</label>
+              <textarea class="form-input" placeholder="e.g. {ai_caption} &#10;&#10;#{{topic}} #shorts #trending">{ai_caption}
+
+#{topic_tag} #shorts #viral</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Default Hashtag Strategy</label>
+              <select class="form-input form-select">
+                <option>AI-generated per clip</option>
+                <option>Niche mix (3 large + 7 mid)</option>
+                <option>Trending only</option>
+                <option>Custom fixed set</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Watermark / Branding</label>
+              <select class="form-input form-select">
+                <option>None</option>
+                <option>Username bottom-right</option>
+                <option>Custom logo (upload)</option>
+                <option>Channel name top-left</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Content Policy</div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Skip explicit content</div>
+                <div class="toggle-desc">Auto-detect and skip adult clips</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Review before posting</div>
+                <div class="toggle-desc">Hold clips in queue for approval</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Detect copyrighted music</div>
+                <div class="toggle-desc">Warn before posting with licensed audio</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;padding:14px;font-size:15px;justify-content:center" onclick="startProcessing()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Process & Generate Clips
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLIPS ══ -->
+    <div class="view" id="view-clips">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Generated Clips</div>
+          <div class="section-sub">Review, edit, and approve clips before scheduling</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <select class="form-input form-select" style="width:180px">
+            <option>All uploads</option>
+            <option>Podcast Episode 47</option>
+            <option>React Hooks Tutorial</option>
+          </select>
+          <button class="btn btn-ghost">Sort: Viral Score</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active">All (12)</div>
+        <div class="tab">Approved (4)</div>
+        <div class="tab">Pending (6)</div>
+        <div class="tab">Rejected (2)</div>
+      </div>
+
+      <div class="grid-4" id="clipGrid"></div>
+    </div>
+
+    <!-- ══ SCHEDULER ══ -->
+    <div class="view" id="view-scheduler">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Schedule Posts</div>
+          <div class="section-sub">Manage your posting calendar across all platforms</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost">← Prev</button>
+          <button class="btn btn-ghost">Today</button>
+          <button class="btn btn-ghost">Next →</button>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">May 2025</div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">Optimal Post Times (by platform)</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="platform-icon pi-tt" style="width:32px;height:32px;font-size:12px">TT</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:500">TikTok</div>
+                  <div style="font-size:12px;color:var(--muted)">7am–9am · 12pm · 7pm–9pm</div>
+                </div>
+                <span style="font-size:12px;color:var(--success)">↑ High</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="platform-icon pi-ig" style="width:32px;height:32px;font-size:12px">IG</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:500">Instagram Reels</div>
+                  <div style="font-size:12px;color:var(--muted)">9am–11am · 2pm · 6pm–8pm</div>
+                </div>
+                <span style="font-size:12px;color:var(--success)">↑ High</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="platform-icon pi-yt" style="width:32px;height:32px;font-size:12px">YT</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:500">YouTube Shorts</div>
+                  <div style="font-size:12px;color:var(--muted)">12pm–3pm · 5pm–8pm</div>
+                </div>
+                <span style="font-size:12px;color:var(--warn)">~ Med</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-title">Blackout Windows</div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Avoid posting midnight–6am</div>
+                <div class="toggle-desc">Skip low-engagement overnight hours</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Pause on weekends</div>
+                <div class="toggle-desc">Hold posts for weekday scheduling</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="divider" style="margin:12px 0"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center">Apply Smart Schedule</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QUEUE ══ -->
+    <div class="view" id="view-queue">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Post Queue</div>
+          <div class="section-sub">All scheduled and posted content</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <select class="form-input form-select" style="width:140px">
+            <option>All platforms</option>
+            <option>TikTok</option>
+            <option>Instagram</option>
+            <option>YouTube</option>
+          </select>
+          <select class="form-input form-select" style="width:130px">
+            <option>All statuses</option>
+            <option>Scheduled</option>
+            <option>Posted</option>
+            <option>Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Clip</th>
+              <th>Platform</th>
+              <th>Scheduled</th>
+              <th>Caption</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="queueTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div class="view" id="view-analytics">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Analytics</div>
+          <div class="section-sub">Performance across all platforms</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm active">7d</button>
+          <button class="btn btn-ghost btn-sm">30d</button>
+          <button class="btn btn-ghost btn-sm">90d</button>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Total Views</div>
+          <div class="stat-num" style="color:var(--accent2)">1.2M</div>
+          <div class="stat-change">↑ 23% vs prev</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Likes</div>
+          <div class="stat-num">84K</div>
+          <div class="stat-change">↑ 11%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">New Followers</div>
+          <div class="stat-num">3.4K</div>
+          <div class="stat-change">↑ 18%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Watch Time</div>
+          <div class="stat-num">62%</div>
+          <div class="stat-change">↑ 4pp</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-title">Views by Platform</div>
+          <div id="platformBars" style="display:flex;flex-direction:column;gap:12px;margin-top:4px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Performing Clips</div>
+          <div id="topClips" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Posting History & Reach</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px" id="analyticsChart"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-size:11px;color:var(--dim)">Apr 18</span>
+          <span style="font-size:11px;color:var(--dim)">Apr 21</span>
+          <span style="font-size:11px;color:var(--dim)">Apr 24</span>
+          <span style="font-size:11px;color:var(--dim)">Apr 27</span>
+          <span style="font-size:11px;color:var(--dim)">Apr 30</span>
+          <span style="font-size:11px;color:var(--dim)">May 3</span>
+          <span style="font-size:11px;color:var(--dim)">Today</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ACCOUNTS ══ -->
+    <div class="view" id="view-accounts">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Connected Accounts</div>
+          <div class="section-sub">Manage social media platform connections</div>
+        </div>
+      </div>
+
+      <div style="max-width:600px">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">TikTok</div>
+          <div class="account-card" style="margin-bottom:0">
+            <div class="platform-icon pi-tt">TT</div>
+            <div class="account-info">
+              <div class="account-name">@jakedoe_creates</div>
+              <div class="account-handle">Connected · 128K followers · Expires Dec 2025</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm">Refresh</button>
+              <button class="btn btn-danger btn-sm">Disconnect</button>
+            </div>
+          </div>
+          <div class="divider" style="margin:14px 0"></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="toggle-row" style="padding:6px 0">
+              <div class="toggle-info"><div class="toggle-title" style="font-size:13px">Auto-post Reels</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row" style="padding:6px 0">
+              <div class="toggle-info"><div class="toggle-title" style="font-size:13px">Allow Duets</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row" style="padding:6px 0;border:none">
+              <div class="toggle-info"><div class="toggle-title" style="font-size:13px">Comment permissions</div></div>
+              <select class="form-input form-select" style="width:140px">
+                <option>Everyone</option><option>Friends</option><option>No one</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Instagram</div>
+          <div class="account-card" style="margin-bottom:0">
+            <div class="platform-icon pi-ig">IG</div>
+            <div class="account-info">
+              <div class="account-name">@jake.creates</div>
+              <div class="account-handle">Connected via Meta API · 54K followers</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm">Refresh</button>
+              <button class="btn btn-danger btn-sm">Disconnect</button>
+            </div>
+          </div>
+          <div class="divider" style="margin:14px 0"></div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Default Reels cover frame</label>
+            <select class="form-input form-select">
+              <option>Auto-select best frame</option>
+              <option>First frame</option>
+              <option>Custom thumbnail</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">YouTube Shorts</div>
+          <div style="text-align:center;padding:24px 0">
+            <div style="font-size:14px;color:var(--muted);margin-bottom:14px">No YouTube account connected</div>
+            <button class="btn btn-primary" onclick="alert('OAuth flow would open here')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Connect YouTube Account
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Add More Platforms</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="opacity:.5">Pinterest (Coming soon)</button>
+            <button class="btn btn-ghost" style="opacity:.5">Twitter/X (Coming soon)</button>
+            <button class="btn btn-ghost" style="opacity:.5">LinkedIn (Coming soon)</button>
+            <button class="btn btn-ghost" style="opacity:.5">Snapchat (Coming soon)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="view" id="view-settings">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Settings</div>
+          <div class="section-sub">Configure your ClipFlow workspace</div>
+        </div>
+      </div>
+
+      <div class="tabs" id="settingsTabs">
+        <div class="tab active" onclick="switchSettingsTab(0,this)">General</div>
+        <div class="tab" onclick="switchSettingsTab(1,this)">AI & Editing</div>
+        <div class="tab" onclick="switchSettingsTab(2,this)">Notifications</div>
+        <div class="tab" onclick="switchSettingsTab(3,this)">Billing</div>
+        <div class="tab" onclick="switchSettingsTab(4,this)">API & Webhooks</div>
+      </div>
+
+      <div style="max-width:600px">
+        <!-- General -->
+        <div id="settingsTab-0">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Profile</div>
+            <div class="form-group">
+              <label class="form-label">Display Name</label>
+              <input class="form-input" value="Jake Doe">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input class="form-input" value="jake@example.com" type="email">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Default Timezone</label>
+              <select class="form-input form-select">
+                <option>UTC-5 Eastern Time</option>
+                <option>UTC-8 Pacific Time</option>
+                <option>UTC+0 London</option>
+                <option>UTC+1 Paris</option>
+              </select>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Storage</div>
+            <div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span>Used: 18.4 GB of 50 GB</span>
+                <span style="color:var(--muted)">36.8%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:36.8%"></div></div>
+            </div>
+            <div class="toggle-row" style="padding:8px 0">
+              <div class="toggle-info">
+                <div class="toggle-title">Auto-delete originals after processing</div>
+                <div class="toggle-desc">Free up space by removing source files</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row" style="padding:8px 0;border:none">
+              <div class="toggle-info">
+                <div class="toggle-title">Keep processed clips for</div>
+              </div>
+              <select class="form-input form-select" style="width:120px">
+                <option>30 days</option><option>60 days</option><option>Forever</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="justify-content:center;padding:10px 24px">Save Changes</button>
+        </div>
+
+        <!-- AI & Editing -->
+        <div id="settingsTab-1" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">AI Model</div>
+            <div class="form-group">
+              <label class="form-label">Clip selection AI</label>
+              <select class="form-input form-select">
+                <option>ClipFlow AI v3 (Recommended)</option>
+                <option>Fast Mode (v2)</option>
+                <option>Custom fine-tuned model</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Viral score threshold (min to include clip)</label>
+              <div class="range-row">
+                <input type="range" min="0" max="100" value="60" oninput="document.getElementById('vsThresh').textContent=this.value+'%'">
+                <span class="range-val" id="vsThresh">60%</span>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Editing Defaults</div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">B-roll insertion</div>
+                <div class="toggle-desc">Auto-add relevant stock B-roll</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Color grading</div>
+                <div class="toggle-desc">Apply cinematic color grade to clips</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Noise reduction</div>
+                <div class="toggle-desc">Clean up audio background noise</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row" style="border:none">
+              <div class="toggle-info">
+                <div class="toggle-title">Intro/Outro frames</div>
+                <div class="toggle-desc">Add branded intro and outro cards</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="justify-content:center;padding:10px 24px">Save Changes</button>
+        </div>
+
+        <!-- Notifications -->
+        <div id="settingsTab-2" style="display:none">
+          <div class="card">
+            <div class="card-title">Email Notifications</div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Clip generation complete</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Post published</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Post failed</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Weekly performance digest</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row" style="border:none">
+              <div class="toggle-info">
+                <div class="toggle-title">Viral breakout alert (>10K views)</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Billing -->
+        <div id="settingsTab-3" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Current Plan</div>
+            <div style="display:flex;align-items:center;gap:16px;padding:16px;background:rgba(124,92,252,0.08);border:1px solid rgba(124,92,252,0.2);border-radius:var(--radius-lg)">
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--accent2)">Pro</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">$39/month · Renews Jun 12</div>
+              </div>
+              <div style="flex:1"></div>
+              <button class="btn btn-ghost btn-sm">Upgrade to Business</button>
+            </div>
+            <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="padding:12px;background:var(--bg3);border-radius:var(--radius)">
+                <div style="font-size:11px;color:var(--muted)">Uploads this month</div>
+                <div style="font-size:18px;font-weight:700;margin-top:4px">12 / 30</div>
+              </div>
+              <div style="padding:12px;background:var(--bg3);border-radius:var(--radius)">
+                <div style="font-size:11px;color:var(--muted)">Clips generated</div>
+                <div style="font-size:18px;font-weight:700;margin-top:4px">67 / 200</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Payment Method</div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:var(--radius)">
+              <div style="width:40px;height:26px;background:var(--bg4);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">VISA</div>
+              <div style="font-size:13px">•••• •••• •••• 4242</div>
+              <div style="font-size:12px;color:var(--muted)">Exp 08/26</div>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto">Update</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- API -->
+        <div id="settingsTab-4" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">API Keys</div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Use the ClipFlow API to integrate with your own tools</div>
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <input class="form-input" value="cf_live_sk_••••••••••••••••••••" readonly style="flex:1;font-family:monospace;font-size:13px">
+              <button class="btn btn-ghost">Copy</button>
+              <button class="btn btn-danger btn-sm">Revoke</button>
+            </div>
+            <button class="btn btn-primary btn-sm">Generate New Key</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Webhooks</div>
+            <div class="form-group">
+              <label class="form-label">Endpoint URL</label>
+              <input class="form-input" placeholder="https://your-server.com/webhooks/clipflow">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Events to send</label>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--accent)"> clip.generated</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--accent)"> post.published</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"> post.failed</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"> analytics.weekly</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="processing-modal" id="procModal">
+  <div class="processing-box">
+    <div class="proc-spinner"></div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="procTitle">Analyzing Your Video</div>
+    <div class="proc-step" id="procSub">Detecting scenes and key moments...</div>
+    <div class="proc-steps-list" id="procSteps"></div>
+    <div style="margin-top:20px">
+      <div class="progress-track"><div class="progress-fill" id="procProgress" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <span style="font-size:12px;color:var(--muted)" id="procPct">0%</span>
+        <span style="font-size:12px;color:var(--muted)" id="procETA">Est. 2 min remaining</span>
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:16px;width:100%;justify-content:center" onclick="document.getElementById('procModal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ── Nav ──
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const titles = {dashboard:'Dashboard',upload:'Upload Content',clips:'Generated Clips',scheduler:'Scheduler',queue:'Post Queue',analytics:'Analytics',accounts:'Connected Accounts',settings:'Settings'};
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+}
+
+function switchSettingsTab(idx, el) {
+  document.querySelectorAll('[id^=settingsTab-]').forEach(t => t.style.display='none');
+  document.getElementById('settingsTab-'+idx).style.display='block';
+  document.querySelectorAll('#settingsTabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function togglePlatform(el, p) {
+  el.classList.toggle('active-'+p);
+}
+
+// ── Ratio buttons ──
+document.querySelectorAll('[id^=ratio]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[id^=ratio]').forEach(b => {
+      b.style.borderColor=''; b.style.color=''; b.classList.remove('active');
+    });
+    this.style.borderColor='var(--accent)';
+    this.style.color='var(--accent2)';
+  });
+});
+
+// ── File upload ──
+function handleFileSelect(e) {
+  if(e.target.files[0]) showUploadedFile(e.target.files[0]);
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('video/')) showUploadedFile(file);
+}
+function showUploadedFile(file) {
+  const zone = document.getElementById('uploadZone');
+  zone.innerHTML = `
+    <div class="upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="upload-title" style="color:var(--success)">${file.name}</div>
+    <div class="upload-sub">${(file.size/1073741824).toFixed(2)} GB · Ready to process</div>
+    <div class="upload-formats"><span class="fmt-tag" style="color:var(--success);border-color:rgba(34,211,160,0.3)">File loaded</span></div>
+  `;
+}
+
+// ── Processing simulation ──
+const procSteps = [
+  'Uploading file to cloud',
+  'Scene detection & analysis',
+  'AI identifying key moments',
+  'Generating clip segments',
+  'Applying smart crop & reframe',
+  'Generating captions (AI)',
+  'Scoring clips for virality',
+  'Rendering final clips',
+  'Preparing for review'
+];
+function startProcessing() {
+  const modal = document.getElementById('procModal');
+  modal.classList.add('show');
+  const stepsEl = document.getElementById('procSteps');
+  stepsEl.innerHTML = procSteps.map((s,i) => `<div class="proc-step-item" id="ps${i}">
+    <svg class="step-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5" opacity="0.3"/></svg>${s}</div>`).join('');
+  let cur = 0;
+  function advance() {
+    if(cur > 0) {
+      const prev = document.getElementById('ps'+(cur-1));
+      if(prev){ prev.classList.remove('active'); prev.classList.add('done'); prev.querySelector('svg').innerHTML = '<polyline points="4 9 7.5 12.5 14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'; }
+    }
+    if(cur < procSteps.length) {
+      const el = document.getElementById('ps'+cur);
+      if(el) el.classList.add('active');
+      document.getElementById('procSub').textContent = procSteps[cur];
+      const pct = Math.round((cur/procSteps.length)*100);
+      document.getElementById('procProgress').style.width = pct+'%';
+      document.getElementById('procPct').textContent = pct+'%';
+      document.getElementById('procETA').textContent = 'Est. '+ Math.max(1, Math.round((procSteps.length-cur)*12)) +' sec remaining';
+      cur++;
+      setTimeout(advance, 1200 + Math.random()*600);
+    } else {
+      document.getElementById('procProgress').style.width='100%';
+      document.getElementById('procPct').textContent='100%';
+      document.getElementById('procTitle').textContent='Clips Ready! 🎉';
+      document.getElementById('procSub').textContent='5 clips generated and ready to review';
+      document.getElementById('procETA').textContent='Done';
+      setTimeout(() => { modal.classList.remove('show'); showView('clips', document.querySelector('[onclick*=clips]')); }, 1800);
+    }
+  }
+  advance();
+}
+
+// ── Build Clip Grid ──
+function buildClips() {
+  const clips = [
+    {title:'"AI will replace most jobs by 2027"', time:'0:32', score:92, emoji:'🔥'},
+    {title:'The 3 frameworks nobody teaches', time:'0:47', score:87, emoji:'💡'},
+    {title:'Why your hooks fail (real examples)', time:'0:58', score:85, emoji:'📌'},
+    {title:'React\'s biggest mistake explained', time:'1:02', score:78, emoji:'⚛️'},
+    {title:'Stop doing this in your videos', time:'0:38', score:74, emoji:'🚫'},
+    {title:'From 0 to 10K subs in 60 days', time:'0:45', score:89, emoji:'📈'},
+    {title:'The cold email that got 3 clients', time:'0:52', score:71, emoji:'✉️'},
+    {title:'My honest take on AI tools', time:'1:15', score:66, emoji:'🤖'},
+  ];
+  const grid = document.getElementById('clipGrid');
+  grid.innerHTML = clips.map((c,i) => `
+    <div class="clip-card" onclick="alert('Clip editor/preview would open here')">
+      <div class="clip-preview">
+        <div style="font-size:36px">${c.emoji}</div>
+        <div class="clip-timeline">
+          <div class="clip-time">${c.time}</div>
+        </div>
+      </div>
+      <div class="clip-meta">
+        <div class="clip-title">${c.title}</div>
+        <div class="clip-score">
+          <span style="font-size:11px;color:var(--muted)">Viral</span>
+          <div class="score-bar"><div class="score-fill" style="width:${c.score}%"></div></div>
+          <span style="font-weight:600;color:${c.score>80?'var(--success)':c.score>65?'var(--warn)':'var(--muted)'}">${c.score}</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn btn-success btn-sm" onclick="event.stopPropagation()">✓ Approve</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation()">✕</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Calendar ──
+function buildCal() {
+  const grid = document.getElementById('calGrid');
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const posts = {3:['tt'],5:['tt','ig'],8:['yt'],10:['tt','ig','yt'],12:['ig'],15:['tt'],17:['yt'],19:['tt','ig'],22:['tt'],24:['ig','yt'],26:['tt'],28:['ig'],30:['tt','yt']};
+  let html = days.map(d=>`<div class="cal-day-label">${d}</div>`).join('');
+  for(let i=0;i<2;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=31;d++){
+    const today = d===26;
+    const p = posts[d]||[];
+    html+=`<div class="cal-day${today?' today':''}${p.length?' has-posts':''}">
+      <span>${d}</span>
+      ${p.length?`<div class="cal-dots">${p.map(pl=>`<div class="cal-dot" style="background:${pl==='tt'?'var(--tiktok)':pl==='ig'?'var(--insta)':'var(--youtube)'}"></div>`).join('')}</div>`:''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ── Queue Table ──
+function buildQueue() {
+  const rows = [
+    {clip:'"AI will replace jobs"',platform:'TikTok',color:'var(--tiktok)',sched:'Today · 9:00 AM',caption:'#ai #tech #viral',status:'scheduled'},
+    {clip:'"3 React hooks you need"',platform:'Instagram',color:'var(--insta)',sched:'Today · 1:00 PM',caption:'#react #coding',status:'scheduled'},
+    {clip:'"Hook frameworks"',platform:'TikTok',color:'var(--tiktok)',sched:'Today · 6:30 PM',caption:'#creator #shorts',status:'scheduled'},
+    {clip:'"Startup pitch breakdown"',platform:'Instagram',color:'var(--insta)',sched:'May 23 · 2:00 PM',caption:'#startup #founder',status:'posted'},
+    {clip:'"Cold email template"',platform:'YouTube',color:'var(--youtube)',sched:'May 22 · 5:00 PM',caption:'#business #email',status:'posted'},
+    {clip:'"10 dev mistakes"',platform:'TikTok',color:'var(--tiktok)',sched:'May 21 · 8:00 AM',caption:'#dev #coding',status:'failed'},
+  ];
+  const tb = document.getElementById('queueTable');
+  tb.innerHTML = rows.map(r=>`
+    <tr>
+      <td><span style="font-size:13px;font-weight:500">${r.clip}</span></td>
+      <td><span style="color:${r.color};font-weight:600;font-size:12px">${r.platform}</span></td>
+      <td style="color:var(--muted);font-size:12px">${r.sched}</td>
+      <td style="color:var(--muted);font-size:12px">${r.caption}</td>
+      <td><span class="badge badge-${r.status}">${r.status==='scheduled'?'● Scheduled':r.status==='posted'?'✓ Posted':'✕ Failed'}</span></td>
+      <td><div style="display:flex;gap:6px">${r.status==='scheduled'?'<button class="btn btn-ghost btn-sm" style="padding:4px 8px">Edit</button><button class="btn btn-danger btn-sm" style="padding:4px 8px">✕</button>':r.status==='failed'?'<button class="btn btn-primary btn-sm" style="padding:4px 8px">Retry</button>':'<button class="btn btn-ghost btn-sm" style="padding:4px 8px">Stats</button>'}</div></td>
+    </tr>
+  `).join('');
+}
+
+// ── Sparkline ──
+function buildSparkline() {
+  const vals = [3,7,4,9,6,11,5];
+  const max = Math.max(...vals);
+  const sl = document.getElementById('sparkline');
+  sl.innerHTML = vals.map((v,i) => `<div class="spark-bar${v===max?' peak':''}" style="height:${Math.round(v/max*100)}%;min-height:8px" title="${v} posts"></div>`).join('');
+}
+
+// ── Analytics ──
+function buildAnalytics() {
+  const pb = document.getElementById('platformBars');
+  const platforms = [
+    {name:'TikTok',val:62,color:'var(--tiktok)',views:'762K'},
+    {name:'Instagram',val:28,color:'var(--insta)',views:'344K'},
+    {name:'YouTube',val:10,color:'var(--youtube)',views:'123K'},
+  ];
+  pb.innerHTML = platforms.map(p=>`
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:${p.color};font-weight:600">${p.name}</span>
+        <span style="color:var(--muted)">${p.views} views · ${p.val}%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${p.val}%;background:${p.color}"></div></div>
+    </div>
+  `).join('');
+
+  const tc = document.getElementById('topClips');
+  const clips=[
+    {t:'"AI will replace jobs"',v:'94K',p:'TikTok',c:'var(--tiktok)'},
+    {t:'"From 0 to 10K subs"',v:'81K',p:'Instagram',c:'var(--insta)'},
+    {t:'"3 frameworks nobody teaches"',v:'67K',p:'TikTok',c:'var(--tiktok)'},
+    {t:'"React mistakes"',v:'43K',p:'YouTube',c:'var(--youtube)'},
+  ];
+  tc.innerHTML = clips.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--dim);min-width:20px">${i+1}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${c.t}</div>
+        <div style="font-size:11px;color:${c.c}">${c.p}</div>
+      </div>
+      <div style="font-weight:700;font-size:14px;color:var(--accent2)">${c.v}</div>
+    </div>
+  `).join('');
+
+  const ac = document.getElementById('analyticsChart');
+  const avs = [12,34,28,55,42,78,63,88,71,92,45,67,95,82];
+  const amx = Math.max(...avs);
+  ac.innerHTML = avs.map((v,i)=>`<div style="flex:1;min-width:0;border-radius:3px 3px 0 0;background:${i===avs.length-1?'var(--accent)':'rgba(124,92,252,0.2)'};height:${Math.round(v/amx*100)}%;transition:background .15s;cursor:pointer;" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='${i===avs.length-1?'var(--accent)':'rgba(124,92,252,0.2)'}'"></div>`).join('');
+}
+
+// ── Init ──
+buildClips();
+buildCal();
+buildQueue();
+buildSparkline();
+buildAnalytics();
+</script>
+</body>
+</html>

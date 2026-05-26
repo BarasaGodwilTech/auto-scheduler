@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipFlow — Connecting...</title>
+<style>
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: #0a0a0f; color: #f0f0f5;
+    display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { text-align: center; padding: 40px; max-width: 360px; }
+  .spinner { width: 48px; height: 48px; border: 3px solid rgba(124,92,252,0.2);
+    border-top-color: #7c5cfc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h2 { font-size: 18px; margin-bottom: 8px; }
+  p { font-size: 13px; color: #8888a0; }
+  .error { color: #ef4444; }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="spinner"></div>
+  <h2>Connecting your account...</h2>
+  <p>This window will close automatically.</p>
+</div>
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+
+  const code = params.get('code') || hashParams.get('code');
+  const state = params.get('state') || hashParams.get('state');
+  const error = params.get('error') || hashParams.get('error');
+  const errorDesc = params.get('error_description') || hashParams.get('error_description') || error;
+
+  const target = window.opener;
+
+  function showError(msg) {
+    document.getElementById('box').innerHTML = `
+      <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+      <h2 class="error">Connection failed</h2>
+      <p>${msg}</p>
+      <button onclick="window.close()" style="margin-top:16px;padding:8px 20px;background:#7c5cfc;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">Close</button>
+    `;
+  }
+
+  if (!target) {
+    showError('This page must be opened as a popup from ClipFlow.');
+    return;
+  }
+
+  if (error) {
+    target.postMessage({ type: 'oauth_callback', state, error, error_description: errorDesc }, '*');
+    document.getElementById('box').innerHTML = `
+      <div style="font-size:32px;margin-bottom:12px">✕</div>
+      <h2 class="error">Connection cancelled</h2>
+      <p>${errorDesc || 'The authorization was denied.'}</p>`;
+    setTimeout(() => window.close(), 2000);
+    return;
+  }
+
+  if (!code) {
+    showError('No authorization code received. Please try again.');
+    return;
+  }
+
+  target.postMessage({ type: 'oauth_callback', code, state }, '*');
+
+  document.getElementById('box').innerHTML = `
+    <div style="font-size:32px;margin-bottom:12px">✓</div>
+    <h2 style="color:#22d3a0">Connected!</h2>
+    <p>Closing this window...</p>`;
+  setTimeout(() => window.close(), 1500);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#7c5cfc">
+<title>ClipFlow Pro — Creator Automation Studio</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/animations.css">
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').then(reg => {
+      console.log('[SW] Registered:', reg.scope);
+      if (!self.crossOriginIsolated) {
+        reg.addEventListener('updatefound', () => {
+          reg.installing?.addEventListener('statechange', function () {
+            if (this.state === 'activated') {
+              document.getElementById('coiBanner')?.style.setProperty('display', 'flex');
+            }
+          });
+        });
+        if (reg.active) {
+          document.getElementById('coiBanner')?.style.setProperty('display', 'flex');
+        }
+      }
+    }).catch(err => console.warn('[SW] Failed:', err));
+  });
+}
+</script>
+<div id="coiBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:rgba(124,92,252,0.95);color:#fff;padding:10px 20px;font-size:13px;align-items:center;gap:12px;font-family:'DM Sans',sans-serif">
+  <span>⚡ Service worker installed — <strong>reload once</strong> to enable FFmpeg video processing (COOP/COEP headers)</span>
+  <button onclick="location.reload()" style="background:#fff;color:#7c5cfc;border:none;padding:5px 14px;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px">Reload Now</button>
+  <button onclick="document.getElementById('coiBanner').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:16px;line-height:1">✕</button>
+</div>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">ClipFlow</div>
+    <div class="logo-sub">Creator Automation Studio</div>
+  </div>
+  <nav>
+    <div class="nav-label">Workspace</div>
+    <button class="nav-item active" data-view="dashboard">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" data-view="upload">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload
+    </button>
+    <button class="nav-item" data-view="clips">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Clips
+    </button>
+    <button class="nav-item" data-view="scheduler">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Scheduler
+    </button>
+    <button class="nav-item" data-view="queue">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Post Queue
+      <span class="nav-badge" id="queueBadge">0</span>
+    </button>
+
+    <div class="nav-label" style="margin-top:12px">Insights</div>
+    <button class="nav-item" data-view="analytics">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </button>
+
+    <div class="nav-label" style="margin-top:12px">Config</div>
+    <button class="nav-item" data-view="accounts">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Accounts
+    </button>
+    <button class="nav-item" data-view="settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      Settings
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="avatar">CF</div>
+      <div>
+        <div class="user-name">ClipFlow Pro</div>
+        <div class="user-plan" id="schedulerStatus">Scheduler active</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="page-title" id="pageTitle">Dashboard</div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" title="Notifications">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </button>
+      <button class="btn btn-primary" data-view="upload" id="newUploadBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Upload
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="view active" id="view-dashboard">
+      <div class="section-header">
+        <div>
+          <div class="section-title" id="dashGreeting">Good morning 👋</div>
+          <div class="section-sub" id="dashSub">Loading your schedule...</div>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card" id="statClips">
+          <div class="stat-label">Clips Generated</div>
+          <div class="stat-num">—</div>
+          <div class="stat-change">Loading...</div>
+        </div>
+        <div class="stat-card" id="statScheduled">
+          <div class="stat-label">Scheduled Posts</div>
+          <div class="stat-num">—</div>
+          <div class="stat-change"></div>
+        </div>
+        <div class="stat-card" id="statPosted">
+          <div class="stat-label">Posts Published</div>
+          <div class="stat-num">—</div>
+          <div class="stat-change" style="color:var(--accent2)"></div>
+        </div>
+        <div class="stat-card" id="statUploads">
+          <div class="stat-label">Total Uploads</div>
+          <div class="stat-num">—</div>
+          <div class="stat-change"></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-title">
+              Recent Uploads
+              <button class="btn btn-ghost btn-sm" data-view="upload">+ Upload</button>
+            </div>
+            <div id="recentUploads">
+              <div style="text-align:center;padding:32px;color:var(--muted)">Loading...</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Upcoming Posts</div>
+            <div id="upcomingPosts" style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Loading...</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-title">
+              <span id="calMonthLabel"></span>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Platform Status</div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--tiktok);font-weight:600">TikTok</span>
+                <span id="tiktok-status-dash" class="conn-status conn-no">Not connected</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--insta);font-weight:600">Instagram</span>
+                <span id="ig-status-dash" class="conn-status conn-no">Not connected</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:var(--youtube);font-weight:600">YouTube</span>
+                <span id="yt-status-dash" class="conn-status conn-no">Not connected</span>
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" data-view="accounts" style="margin-top:12px;width:100%;justify-content:center">Manage Accounts</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ UPLOAD ══ -->
+    <div class="view" id="view-upload">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Upload Content</div>
+          <div class="section-sub">Upload a long-form video to automatically generate short clips</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div id="uploadZone" class="upload-zone">
+            <div class="upload-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="upload-title">Drop your video here</div>
+            <div class="upload-sub">or click to browse files</div>
+            <div class="upload-formats">
+              <span class="fmt-tag">MP4</span><span class="fmt-tag">MOV</span>
+              <span class="fmt-tag">WebM</span><span class="fmt-tag">MKV</span>
+              <span class="fmt-tag">AVI</span>
+            </div>
+          </div>
+          <input type="file" id="fileInput" accept="video/*">
+
+          <div class="card" style="margin-top:20px">
+            <div class="card-title">Processing Settings</div>
+            <div class="form-group">
+              <label class="form-label">Target Clip Duration</label>
+              <div class="range-row">
+                <input type="range" min="15" max="60" value="30" step="5" id="clipDuration"
+                  oninput="document.getElementById('clipDurationVal').textContent=this.value+'s'">
+                <span class="range-val" id="clipDurationVal">30s</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max Clips to Generate</label>
+              <div class="range-row">
+                <input type="range" min="1" max="12" value="6" id="maxClips"
+                  oninput="document.getElementById('maxClipsVal').textContent=this.value">
+                <span class="range-val" id="maxClipsVal">6</span>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Output Format</label>
+              <select class="form-input form-select" id="outputFormat">
+                <option value="copy">Fast Copy (no re-encode, original quality)</option>
+                <option value="reencode">Re-encode to 9:16 (for Reels/Shorts/TikTok)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px;border-color:rgba(245,158,11,0.25)">
+            <div class="card-title" style="color:var(--warn)">⚖ Fair Use Compliance</div>
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px">
+              <input type="checkbox" id="fairUseCheck" style="accent-color:var(--accent);margin-top:3px;flex-shrink:0">
+              <span style="color:var(--muted)">I confirm this content is original, licensed, or I have fair use rights. Copyright notices will be added to captions only. Logged at <span id="fairUseTimestamp">—</span></span>
+            </label>
+          </div>
+
+          <button class="btn btn-primary" id="processBtn" disabled style="margin-top:16px;width:100%;justify-content:center;padding:12px;font-size:14px;opacity:.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Generate Clips with FFmpeg
+          </button>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">How it works</div>
+            <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--muted)">
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="color:var(--accent2);font-weight:700;flex-shrink:0">1</span>
+                <span><strong style="color:var(--text)">Audio Analysis</strong> — Web Audio API detects high-energy moments and audio peaks</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="color:var(--accent2);font-weight:700;flex-shrink:0">2</span>
+                <span><strong style="color:var(--text)">Scene Detection</strong> — Canvas API compares frames to find natural cut points</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="color:var(--accent2);font-weight:700;flex-shrink:0">3</span>
+                <span><strong style="color:var(--text)">Scoring Algorithm</strong> — Combines audio (40%) + scene (30%) + position (30%) to rank clips</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="color:var(--accent2);font-weight:700;flex-shrink:0">4</span>
+                <span><strong style="color:var(--text)">FFmpeg.wasm</strong> — Extracts clips client-side, no server needed. Files stored in IndexedDB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="border-color:rgba(124,92,252,0.25)">
+            <div class="card-title" style="color:var(--accent2)">⚡ FFmpeg Status</div>
+            <div style="font-size:13px;color:var(--muted)">
+              FFmpeg.wasm loads on first use from CDN (~30MB). Subsequent loads are cached by the service worker.
+            </div>
+            <div style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:var(--radius);font-size:12px;color:var(--dim);font-family:monospace" id="ffmpegStatus">
+              Ready to load
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:var(--dim)">
+              Requires SharedArrayBuffer (COOP/COEP headers — enabled by service worker)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLIPS ══ -->
+    <div class="view" id="view-clips">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Generated Clips</div>
+          <div class="section-sub">Real clips extracted by FFmpeg from your uploaded videos</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="window.clipsUI?.refresh()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="grid-3" id="clipGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">
+          <div style="font-size:48px;margin-bottom:12px">🎬</div>
+          <div>Upload a video to generate clips</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCHEDULER ══ -->
+    <div class="view" id="view-scheduler">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Scheduler</div>
+          <div class="section-sub">Schedule approved clips to post at optimal times</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">
+            <span id="calMonthLabel2"></span>
+          </div>
+          <div class="cal-grid" id="calGrid2"></div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Schedule a Clip</div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:14px">
+              Go to <a href="#" onclick="window.app?.navigate('clips')" style="color:var(--accent2)">Clips</a> and click "📅 Schedule" on any clip, or use the form below.
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Clip</label>
+              <select class="form-input form-select" id="schedClipSelect">
+                <option value="">— Choose a clip —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Platform</label>
+              <select class="form-input form-select" id="schedPlatformSelect">
+                <option value="">— Select platform —</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Instagram">Instagram Reels</option>
+                <option value="YouTube">YouTube Shorts</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Caption / Description</label>
+              <textarea class="form-input" id="schedCaption" placeholder="Write your caption here...
+#hashtags go at the end"></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Schedule Date & Time</label>
+              <input type="datetime-local" class="form-input" id="schedTime">
+            </div>
+            <button class="btn btn-primary" onclick="window.app?.scheduleFromForm()" style="margin-top:14px;width:100%;justify-content:center">
+              📅 Add to Queue
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Best Post Times</div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted)">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--tiktok)">TikTok</span><span>7–9 AM · 7–9 PM</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--insta)">Instagram</span><span>11 AM · 2–3 PM</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--youtube)">YouTube</span><span>2–4 PM · Fri–Sun</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QUEUE ══ -->
+    <div class="view" id="view-queue">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Post Queue</div>
+          <div class="section-sub">Scheduler checks every 60 seconds for due posts</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="window.queueUI?.refresh()">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Clip</th>
+              <th>Platform</th>
+              <th>Scheduled</th>
+              <th>Retries</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="queueTable">
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">Loading queue...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div class="view" id="view-analytics">
+      <div class="section-header">
+        <div class="section-title">Analytics</div>
+        <div class="section-sub" style="margin-top:4px">Connect platform accounts to view real analytics via their APIs</div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">Total Clips</div><div class="stat-num" id="anaClips">—</div></div>
+        <div class="stat-card"><div class="stat-label">Total Posted</div><div class="stat-num" id="anaPosted">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending Queue</div><div class="stat-num" id="anaPending">—</div></div>
+        <div class="stat-card"><div class="stat-label">Failed Posts</div><div class="stat-num" id="anaFailed">—</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Posts by Platform</div>
+          <div id="platformBars" style="display:flex;flex-direction:column;gap:12px">
+            <div style="color:var(--muted);font-size:13px">Connect accounts to see platform breakdown</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Queue Activity (Last 14 days)</div>
+          <div id="analyticsChart" style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <div class="card-title">
+          Published History
+          <span style="font-size:11px;color:var(--muted);font-weight:400">All successfully posted content</span>
+        </div>
+        <div id="postedHistory" style="color:var(--muted);font-size:13px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ══ ACCOUNTS ══ -->
+    <div class="view" id="view-accounts">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Connected Accounts</div>
+          <div class="section-sub">Connect your social accounts to enable real auto-publishing</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="account-card">
+            <div class="platform-icon pi-tt">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.68a8.18 8.18 0 004.78 1.53V6.7a4.85 4.85 0 01-1.01-.01z"/></svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">TikTok</div>
+              <div class="account-handle" id="tiktok-handle">Not connected</div>
+            </div>
+            <span class="conn-status conn-no" id="tiktok-status">Not connected</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:20px;margin-left:52px">
+            <button class="btn btn-primary btn-sm" id="tiktok-connect" onclick="window.app?.connectPlatform('TikTok')">Connect TikTok</button>
+            <button class="btn btn-danger btn-sm" id="tiktok-disconnect" style="display:none" onclick="window.app?.disconnectPlatform('TikTok')">Disconnect</button>
+          </div>
+
+          <div class="account-card">
+            <div class="platform-icon pi-ig">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">Instagram (via Facebook)</div>
+              <div class="account-handle" id="ig-handle">Not connected</div>
+            </div>
+            <span class="conn-status conn-no" id="ig-status">Not connected</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:20px;margin-left:52px">
+            <button class="btn btn-primary btn-sm" id="ig-connect" onclick="window.app?.connectPlatform('Instagram')">Connect Instagram</button>
+            <button class="btn btn-danger btn-sm" id="ig-disconnect" style="display:none" onclick="window.app?.disconnectPlatform('Instagram')">Disconnect</button>
+          </div>
+
+          <div class="account-card">
+            <div class="platform-icon pi-yt">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">YouTube</div>
+              <div class="account-handle" id="yt-handle">Not connected</div>
+            </div>
+            <span class="conn-status conn-no" id="yt-status">Not connected</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-left:52px">
+            <button class="btn btn-primary btn-sm" id="yt-connect" onclick="window.app?.connectPlatform('YouTube')">Connect YouTube</button>
+            <button class="btn btn-danger btn-sm" id="yt-disconnect" style="display:none" onclick="window.app?.disconnectPlatform('YouTube')">Disconnect</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">OAuth Requirements</div>
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--muted)">
+              <div>
+                <div style="color:var(--text);font-weight:500;margin-bottom:4px">Before connecting accounts:</div>
+                <ol style="padding-left:16px;display:flex;flex-direction:column;gap:6px">
+                  <li>Register your app in each platform's developer portal</li>
+                  <li>Add <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px">${window.location.origin}/auth/callback.html</code> as a redirect URI</li>
+                  <li>Enter API keys in <strong style="color:var(--accent2)">Settings → API Keys</strong></li>
+                  <li>This app must be served over <strong>HTTPS</strong> (or localhost)</li>
+                </ol>
+              </div>
+              <div>
+                <div style="color:var(--text);font-weight:500;margin-bottom:4px">Developer portals:</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <a href="https://developers.tiktok.com" target="_blank" style="color:var(--tiktok)">→ TikTok for Developers</a>
+                  <a href="https://developers.facebook.com" target="_blank" style="color:var(--insta)">→ Meta for Developers</a>
+                  <a href="https://console.cloud.google.com" target="_blank" style="color:var(--youtube)">→ Google Cloud Console</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="view" id="view-settings">
+      <div class="section-header">
+        <div class="section-title">Settings</div>
+      </div>
+
+      <div id="settingsTabs" class="tabs">
+        <div class="tab active" data-tab="0">API Keys</div>
+        <div class="tab" data-tab="1">Processing</div>
+        <div class="tab" data-tab="2">Notifications</div>
+        <div class="tab" data-tab="3">About</div>
+      </div>
+
+      <!-- API Keys -->
+      <div id="settingsTab-0">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">TikTok API</div>
+          <div class="form-group">
+            <label class="form-label">Client Key</label>
+            <input class="form-input" id="tiktokClientKey" placeholder="aw_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Client Secret</label>
+            <input class="form-input" type="password" id="tiktokClientSecret" placeholder="••••••••••••••••" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Facebook / Instagram API</div>
+          <div class="form-group">
+            <label class="form-label">App ID</label>
+            <input class="form-input" id="facebookAppId" placeholder="123456789012345" autocomplete="off">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">App Secret</label>
+            <input class="form-input" type="password" id="facebookAppSecret" placeholder="••••••••••••••••" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Google / YouTube API</div>
+          <div class="form-group">
+            <label class="form-label">Client ID</label>
+            <input class="form-input" id="googleClientId" placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com" autocomplete="off">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Client Secret</label>
+            <input class="form-input" type="password" id="googleClientSecret" placeholder="GOCSPX-••••••••••••••" autocomplete="off">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="saveApiKeysBtn">Save API Keys</button>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Keys are encrypted with XOR and stored in IndexedDB. Never sent to any server.</div>
+      </div>
+
+      <!-- Processing -->
+      <div id="settingsTab-1" style="display:none">
+        <div class="card">
+          <div class="card-title">Video Processing</div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-title">Re-encode for vertical (9:16)</div>
+              <div class="toggle-desc">Re-encodes clips to vertical format — slower but ensures compatibility</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="settingReEncode"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-title">Add 0.5s end card</div>
+              <div class="toggle-desc">Optional fade-out end card. Copyright notices go in captions only.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="settingEndCard"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row" style="border:none">
+            <div class="toggle-info">
+              <div class="toggle-title">Use Web Workers for FFmpeg</div>
+              <div class="toggle-desc">Process video in a background thread (requires HTTPS)</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" checked id="settingWebWorker"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div id="settingsTab-2" style="display:none">
+        <div class="card">
+          <div class="card-title">Browser Notifications</div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-title">Post published</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-title">Post failed</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row" style="border:none">
+            <div class="toggle-info"><div class="toggle-title">Clip generation complete</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div id="settingsTab-3" style="display:none">
+        <div class="card">
+          <div class="card-title">About ClipFlow Pro</div>
+          <div style="font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:8px">
+            <div><strong style="color:var(--text)">Version:</strong> 1.0.0</div>
+            <div><strong style="color:var(--text)">FFmpeg.wasm:</strong> @ffmpeg/ffmpeg@0.12.10 + @ffmpeg/core@0.12.6</div>
+            <div><strong style="color:var(--text)">Storage:</strong> IndexedDB (no server required)</div>
+            <div><strong style="color:var(--text)">Scheduler:</strong> 60-second polling with exponential backoff retry</div>
+            <div><strong style="color:var(--text)">OAuth:</strong> PKCE (TikTok, YouTube), Authorization Code (Instagram)</div>
+            <div><strong style="color:var(--text)">Processing:</strong> Client-side only — videos never leave your browser</div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px">
+            <button class="btn btn-danger btn-sm" onclick="if(confirm('Clear all clips and posts? API keys preserved.')) window.app?.clearData()">Clear Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="processing-modal" id="procModal">
+  <div class="processing-box">
+    <div class="proc-spinner"></div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="procTitle">Processing Video</div>
+    <div class="proc-step" id="procSub">Initializing FFmpeg...</div>
+    <div class="proc-steps-list" id="procSteps"></div>
+    <div style="margin-top:20px">
+      <div class="progress-track"><div class="progress-fill" id="procProgress" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <span style="font-size:12px;color:var(--muted)" id="procPct">0%</span>
+        <span style="font-size:12px;color:var(--muted)">Real FFmpeg processing</span>
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:16px;width:100%;justify-content:center" onclick="document.getElementById('procModal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="overlay-modal" id="scheduleModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Schedule Clip</span>
+      <button class="modal-close" id="scheduleModalClose">✕</button>
+    </div>
+    <form id="scheduleForm">
+      <div class="form-group">
+        <label class="form-label">Platform</label>
+        <select class="form-input form-select" id="schedulePlatform" required>
+          <option value="">— Select platform —</option>
+          <option value="TikTok">TikTok</option>
+          <option value="Instagram">Instagram Reels</option>
+          <option value="YouTube">YouTube Shorts</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caption</label>
+        <textarea class="form-input" id="scheduleCaption" placeholder="Your caption with #hashtags..." rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Privacy</label>
+        <select class="form-input form-select" id="schedulePrivacy">
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+          <option value="SELF_ONLY">Self only (TikTok draft)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label class="form-label">Date & Time</label>
+        <input type="datetime-local" class="form-input" id="scheduleTime" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
+        📅 Add to Queue
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="overlay-modal" id="previewModal">
+  <div class="modal-box" style="max-width:400px;padding:16px">
+    <div class="modal-header" style="margin-bottom:12px">
+      <span class="modal-title">Clip Preview</span>
+      <button class="modal-close" id="previewModalClose">✕</button>
+    </div>
+    <video id="previewVideo" controls style="width:100%;border-radius:var(--radius-lg);max-height:70vh;background:#000"></video>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const fairUse = document.getElementById('fairUseCheck');
+  if (fairUse) {
+    fairUse.addEventListener('change', () => {
+      if (fairUse.checked) {
+        const ts = document.getElementById('fairUseTimestamp');
+        if (ts) ts.textContent = new Date().toLocaleString();
+      }
+    });
+  }
+
+  const calLabel = document.getElementById('calMonthLabel');
+  const calLabel2 = document.getElementById('calMonthLabel2');
+  const now = new Date();
+  const label = now.toLocaleDateString([], { month: 'long', year: 'numeric' });
+  if (calLabel) calLabel.textContent = label;
+  if (calLabel2) calLabel2.textContent = label;
+
+  const newUploadBtn = document.getElementById('newUploadBtn');
+  if (newUploadBtn) newUploadBtn.addEventListener('click', () => window.app?.navigate('upload'));
+
+  document.querySelectorAll('[data-view]').forEach(el => {
+    if (!el.classList.contains('nav-item') && el.id !== 'newUploadBtn') {
+      el.addEventListener('click', () => window.app?.navigate(el.dataset.view));
+    }
+  });
+
+  const settingsTabs = document.getElementById('settingsTabs');
+  if (settingsTabs) {
+    settingsTabs.querySelectorAll('.tab').forEach((tab, i) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('#settingsTabs .tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('[id^=settingsTab-]').forEach(t => t.style.display = 'none');
+        const target = document.getElementById(`settingsTab-${i}`);
+        if (target) target.style.display = 'block';
+      });
+    });
+  }
+
+  loadSavedApiKeys();
+});
+
+async function loadSavedApiKeys() {
+  if (typeof window.db === 'undefined') return;
+}
+
+if (window.location.search.includes('view=')) {
+  const view = new URLSearchParams(window.location.search).get('view');
+  if (view) window.addEventListener('load', () => window.app?.navigate(view));
+}
+</script>
+</body>
+</html>
