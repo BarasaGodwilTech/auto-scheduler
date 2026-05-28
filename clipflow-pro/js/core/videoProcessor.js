@@ -238,39 +238,46 @@ export class VideoProcessor {
             ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvasW, canvasH);
           }
 
-          // ── Part number overlay ───────────────────────────────────
+          // ── Part number overlay (first 5s, 1s fade-out) ──────────
           const { format, partNumber } = overlayOptions;
-          if (format === 'part-text' && partNumber != null) {
-            const fs = Math.round(canvasW * 0.11);
+          const clipElapsed = video.currentTime - startSec;
+          const OVERLAY_SHOW = 5;
+          const OVERLAY_FADE = 4;
+          if (format !== 'none' && partNumber != null && clipElapsed < OVERLAY_SHOW) {
+            const alpha = clipElapsed > OVERLAY_FADE
+              ? Math.max(0, 1 - (clipElapsed - OVERLAY_FADE) / (OVERLAY_SHOW - OVERLAY_FADE))
+              : 1;
             ctx.save();
-            ctx.font = `bold ${fs}px 'Arial Black', Impact, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.lineWidth = fs * 0.12;
-            ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-            ctx.strokeText(`PART ${partNumber}`, canvasW / 2, canvasH * 0.08);
-            ctx.fillStyle = '#cc0000';
-            ctx.fillText(`PART ${partNumber}`, canvasW / 2, canvasH * 0.08);
-            ctx.restore();
-          } else if (format === 'styled-number' && partNumber != null) {
-            const ns = Math.round(canvasW * 0.38);
-            ctx.save();
-            ctx.font = `bold ${ns}px 'Arial Black', Impact, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,0.7)';
-            ctx.shadowBlur = ns * 0.12;
-            ctx.shadowOffsetX = ns * 0.06;
-            ctx.shadowOffsetY = ns * 0.06;
-            ctx.strokeStyle = '#b85c00';
-            ctx.lineWidth = ns * 0.09;
-            ctx.strokeText(String(partNumber), canvasW / 2, canvasH * 0.42);
-            const grad = ctx.createLinearGradient(0, canvasH * 0.42 - ns / 2, 0, canvasH * 0.42 + ns / 2);
-            grad.addColorStop(0, '#ffffff');
-            grad.addColorStop(0.45, '#e0e0e0');
-            grad.addColorStop(1, '#909090');
-            ctx.fillStyle = grad;
-            ctx.fillText(String(partNumber), canvasW / 2, canvasH * 0.42);
+            ctx.globalAlpha = alpha;
+            if (format === 'part-text') {
+              const fs = Math.round(canvasW * 0.085);
+              ctx.font = `bold ${fs}px 'Arial Black', Impact, sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'top';
+              ctx.lineWidth = fs * 0.12;
+              ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+              ctx.strokeText(`PART ${partNumber}`, canvasW / 2, canvasH * 0.08);
+              ctx.fillStyle = '#cc0000';
+              ctx.fillText(`PART ${partNumber}`, canvasW / 2, canvasH * 0.08);
+            } else if (format === 'styled-number') {
+              const ns = Math.round(canvasW * 0.28);
+              ctx.font = `bold ${ns}px 'Arial Black', Impact, sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.shadowColor = 'rgba(0,0,0,0.7)';
+              ctx.shadowBlur = ns * 0.12;
+              ctx.shadowOffsetX = ns * 0.06;
+              ctx.shadowOffsetY = ns * 0.06;
+              ctx.strokeStyle = '#b85c00';
+              ctx.lineWidth = ns * 0.09;
+              ctx.strokeText(String(partNumber), canvasW / 2, canvasH * 0.42);
+              const grad = ctx.createLinearGradient(0, canvasH * 0.42 - ns / 2, 0, canvasH * 0.42 + ns / 2);
+              grad.addColorStop(0, '#ffffff');
+              grad.addColorStop(0.45, '#e0e0e0');
+              grad.addColorStop(1, '#909090');
+              ctx.fillStyle = grad;
+              ctx.fillText(String(partNumber), canvasW / 2, canvasH * 0.42);
+            }
             ctx.restore();
           }
 
