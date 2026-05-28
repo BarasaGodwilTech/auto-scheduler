@@ -82,6 +82,10 @@ export const uploadUI = {
       const targetDuration = parseInt(document.getElementById('clipDuration')?.value || '30');
       const maxClips = parseInt(document.getElementById('maxClips')?.value || '6');
       const reEncode = document.getElementById('outputFormat')?.value === 'reencode';
+      const seriesMode = document.getElementById('seriesMode')?.checked || false;
+      const seriesStartPart = parseInt(document.getElementById('seriesStartPart')?.value || '1');
+      const overlayFormat = document.getElementById('overlayFormat')?.value || 'part-text';
+      const aspectRatio = document.getElementById('aspectRatio')?.value || '9:16';
 
       await clipGenerator.processUpload(
         upload.id,
@@ -89,14 +93,20 @@ export const uploadUI = {
           if (progress.phase === 'analyzing') {
             const pct = 5 + progress.pct * 0.55;
             this.setModalProgress(pct, this.getPhaseLabel(progress));
+          } else if (progress.phase === 'series-skip') {
+            this.setModalProgress(60, 'Series mode: splitting into sequential parts...');
           } else if (progress.phase === 'generating') {
             const pct = 60 + progress.pct * 0.38;
-            this.setModalProgress(pct, `Extracting clip ${(progress.clipIndex || 0) + 1}...`);
+            const partNum = seriesStartPart + (progress.clipIndex || 0);
+            const label = seriesMode
+              ? `Recording Part ${partNum}/${progress.total || '?'}...`
+              : `Extracting clip ${(progress.clipIndex || 0) + 1}...`;
+            this.setModalProgress(pct, label);
           } else if (progress.phase === 'done') {
             this.setModalProgress(100, `${progress.clips?.length || 0} clips ready!`);
           }
         },
-        { targetDuration, maxClips, reEncode }
+        { targetDuration, maxClips, reEncode, seriesMode, seriesStartPart, overlayFormat, aspectRatio }
       );
 
       this.hideModal();
@@ -108,6 +118,8 @@ export const uploadUI = {
       notify.error(`Processing failed: ${err.message}`);
     } finally {
       this.isProcessing = false;
+      const preview = document.getElementById('procLivePreview');
+      if (preview) preview.style.display = 'none';
     }
   },
 
@@ -145,7 +157,7 @@ export const uploadUI = {
     if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
     if (sub) sub.textContent = label;
 
-    const currentStep = pct < 10 ? 0 : pct < 30 ? 1 : pct < 50 ? 2 : pct < 70 ? 3 : pct < 90 ? 4 : 5;
+    const currentStep = pct < 5 ? 0 : pct < 30 ? 1 : pct < 50 ? 2 : pct < 57 ? 3 : pct < 60 ? 4 : 5;
     this.updateStepsList(['Save to storage', 'Load FFmpeg', 'Analyze audio', 'Detect scenes', 'Score segments', 'Extract clips'], currentStep);
   },
 

@@ -106,7 +106,7 @@ export class ClipGenerator {
   }
 
   async generateClips(uploadId, videoBlob, candidates, options = {}) {
-    const { onProgress = null, reEncode = false } = options;
+    const { onProgress = null, reEncode = false, overlayOptions = {}, aspectRatio = 'original' } = options;
     const results = [];
     const total = candidates.length;
 
@@ -125,29 +125,30 @@ export class ClipGenerator {
     } else {
       if (onProgress) onProgress({ phase: 'extracting', clipIndex: 0, total, pct: 0 });
 
+      let currentClipIndex = 0;
       videoProcessor.onProgress = (pct) => {
-        const done = Math.floor(pct / 100 * total);
-        if (onProgress) onProgress({ phase: 'extracting', clipIndex: done, total, pct });
+        if (onProgress) onProgress({ phase: 'extracting', clipIndex: currentClipIndex, total, pct });
       };
 
       const blobs = await videoProcessor.extractClipsBatch(
         videoBlob,
-        candidates.map(c => ({ start: c.start, duration: c.duration })),
+        candidates.map((c, idx) => ({ start: c.start, duration: c.duration, overlayOptions: { ...overlayOptions, partNumber: overlayOptions.partNumber + idx }, aspectRatio })),
         (i) => {
+          currentClipIndex = i + 1;
           if (onProgress) onProgress({ phase: 'extracting', clipIndex: i, total, pct: 100 });
         }
       );
       videoProcessor.onProgress = null;
 
       for (let i = 0; i < blobs.length; i++) {
-        await this._saveClip(uploadId, blobs[i], candidates[i], i, results);
+        if (blobs[i]) await this._saveClip(uploadId, blobs[i], candidates[i], i, results, overlayOptions);
       }
     }
 
     return results;
   }
 
-  async _saveClip(uploadId, clipBlob, c, i, results) {
+  async _saveClip(uploadId, clipBlob, c, i, results, overlayOptions = {}) {
     const blobId = videoStore.generateId('clip');
     await videoStore.saveBlob(blobId, clipBlob, { clipIndex: i });
 
@@ -162,7 +163,10 @@ export class ClipGenerator {
       sources: c.sources,
       status: 'ready',
       createdAt: new Date().toISOString(),
-      title: `Clip ${i + 1} (${formatTime(c.start)} \u2013 ${formatTime(c.start + c.duration)})`,
+      title: (overlayOptions.format !== 'none' && overlayOptions.partNumber != null)
+        ? `Part ${overlayOptions.partNumber + i} (${formatTime(c.start)} \u2013 ${formatTime(c.start + c.duration)})`
+        : `Clip ${i + 1} (${formatTime(c.start)} \u2013 ${formatTime(c.start + c.duration)})`,
+      partNumber: (overlayOptions.partNumber != null) ? overlayOptions.partNumber + i : null,
     };
 
     const clipId = await db.put(STORES.CLIPS, record);
@@ -174,6 +178,10 @@ export class ClipGenerator {
       maxClips = 8,
       targetDuration = 30,
       reEncode = false,
+      seriesMode = false,
+      seriesStartPart = 1,
+      overlayFormat = 'part-text',
+      aspectRatio = 'original',
     } = options;
 
     this.MAX_CLIPS = maxClips;
@@ -189,18 +197,43 @@ export class ClipGenerator {
 
     await db.put(STORES.UPLOADS, { ...upload, status: 'processing', updatedAt: new Date().toISOString() });
 
-    if (onProgress) onProgress({ phase: 'analyzing', pct: 0 });
-    const { candidates, duration } = await this.analyze(videoBlob, (p) => {
-      if (onProgress) onProgress({ phase: 'analyzing', pct: p.pct * 0.6 });
-    });
+    let candidates;
+    let duration;
 
-    if (onProgress) onProgress({ phase: 'generating', pct: 60 });
+    if (seriesMode) {
+      if (onProgress) onProgress({ phase: 'series-skip', pct: 60 });
+      duration = await this._getVideoDuration(videoBlob);
+      const total = Math.ceil(duration / targetDuration);
+      candidates = Array.from({ length: total }, (_, i) => ({
+        start: i * targetDuration,
+        duration: Math.min(targetDuration, duration - i * targetDuration),
+        totalScore: 100,
+        audioScore: 0,
+        sceneScore: 0,
+        posScore: 1,
+        sources: ['series'],
+      }));
+    } else {
+      if (onProgress) onProgress({ phase: 'analyzing', pct: 0 });
+      const result = await this.analyze(videoBlob, (p) => {
+        if (onProgress) onProgress({ phase: 'analyzing', pct: p.pct * 0.6 });
+      });
+      candidates = result.candidates;
+      duration = result.duration;
+    }
+
+    const overlayOptions = { format: overlayFormat, partNumber: seriesStartPart };
+
+    if (onProgress) onProgress({ phase: 'generating', pct: 0, clipIndex: 0, total: candidates.length });
     const clips = await this.generateClips(uploadId, videoBlob, candidates, {
       reEncode,
+      overlayOptions,
+      aspectRatio,
       onProgress: (p) => {
         const total = candidates.length || 1;
-        const base = 60 + ((p.clipIndex || 0) / total) * 35;
-        if (onProgress) onProgress({ phase: 'generating', pct: base });
+        const clipsDone = (p.clipIndex || 0) + Math.min((p.pct || 0) / 100, 1);
+        const normalizedPct = Math.min((clipsDone / total) * 100, 100);
+        if (onProgress) onProgress({ phase: 'generating', pct: normalizedPct, clipIndex: p.clipIndex || 0, total });
       },
     });
 
@@ -216,6 +249,17 @@ export class ClipGenerator {
     return clips;
   }
 }
+
+ClipGenerator.prototype._getVideoDuration = function(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.src = url;
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration); };
+    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read video duration')); };
+  });
+};
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');

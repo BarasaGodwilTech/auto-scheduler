@@ -221,27 +221,86 @@ if ('serviceWorker' in navigator) {
 
           <div class="card" style="margin-top:20px">
             <div class="card-title">Processing Settings</div>
+
+            <!-- Series Mode toggle -->
+            <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div>
+                <label class="form-label" style="margin-bottom:2px">Series Mode</label>
+                <div style="font-size:11px;color:var(--dim)">Split full video into sequential Parts (Part 1 → Part 2 → …)</div>
+              </div>
+              <input type="checkbox" id="seriesMode" style="display:none"
+                onchange="
+                  const sm=this.checked;
+                  document.getElementById('seriesModeThumb').style.left=sm?'22px':'2px';
+                  document.getElementById('seriesModeTrack').style.background=sm?'var(--accent2)':'var(--bg3)';
+                  document.getElementById('smartClipsGroup').style.display=sm?'none':'block';
+                  document.getElementById('seriesPartsGroup').style.display=sm?'block':'none';
+                ">
+              <div style="position:relative;width:42px;height:22px;flex-shrink:0;cursor:pointer;border-radius:22px;border:1px solid rgba(255,255,255,.1)"
+                id="seriesModeTrack"
+                onclick="const cb=document.getElementById('seriesMode');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'))">
+                <span style="position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .25s,background .25s" id="seriesModeThumb"></span>
+              </div>
+            </div>
+
+            <!-- Smart clips options (default) -->
+            <div id="smartClipsGroup">
+              <div class="form-group">
+                <label class="form-label">Max Clips to Generate</label>
+                <div class="range-row">
+                  <input type="range" min="1" max="20" value="6" id="maxClips"
+                    oninput="document.getElementById('maxClipsVal').textContent=this.value">
+                  <span class="range-val" id="maxClipsVal">6</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Series mode options -->
+            <div id="seriesPartsGroup" style="display:none">
+              <div class="form-group">
+                <label class="form-label">Start Part Number</label>
+                <div class="range-row">
+                  <input type="range" min="1" max="50" value="1" id="seriesStartPart"
+                    oninput="document.getElementById('seriesStartPartVal').textContent='Part '+this.value">
+                  <span class="range-val" id="seriesStartPartVal">Part 1</span>
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
-              <label class="form-label">Target Clip Duration</label>
+              <label class="form-label">Clip Duration</label>
               <div class="range-row">
-                <input type="range" min="15" max="60" value="30" step="5" id="clipDuration"
+                <input type="range" min="15" max="120" value="30" step="5" id="clipDuration"
                   oninput="document.getElementById('clipDurationVal').textContent=this.value+'s'">
                 <span class="range-val" id="clipDurationVal">30s</span>
               </div>
             </div>
+
             <div class="form-group">
-              <label class="form-label">Max Clips to Generate</label>
-              <div class="range-row">
-                <input type="range" min="1" max="12" value="6" id="maxClips"
-                  oninput="document.getElementById('maxClipsVal').textContent=this.value">
-                <span class="range-val" id="maxClipsVal">6</span>
-              </div>
+              <label class="form-label">Part Number Overlay</label>
+              <select class="form-input form-select" id="overlayFormat">
+                <option value="none">No overlay</option>
+                <option value="part-text" selected>PART N — Bold text (top center)</option>
+                <option value="styled-number">Styled number — Large 3D digit (center)</option>
+              </select>
             </div>
+
+            <div class="form-group">
+              <label class="form-label">Output Aspect Ratio</label>
+              <select class="form-input form-select" id="aspectRatio">
+                <option value="original">Original (no crop)</option>
+                <option value="9:16" selected>9:16 — TikTok / Reels / Shorts (portrait)</option>
+                <option value="1:1">1:1 — Square (Instagram)</option>
+                <option value="4:5">4:5 — Instagram portrait</option>
+                <option value="16:9">16:9 — Landscape (YouTube)</option>
+              </select>
+            </div>
+
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label">Output Format</label>
               <select class="form-input form-select" id="outputFormat">
-                <option value="copy">Fast Copy (no re-encode, original quality)</option>
-                <option value="reencode">Re-encode to 9:16 (for Reels/Shorts/TikTok)</option>
+                <option value="copy">Fast MediaRecorder (recommended)</option>
+                <option value="reencode">Re-encode with FFmpeg (slow, small files only)</option>
               </select>
             </div>
           </div>
@@ -661,6 +720,11 @@ if ('serviceWorker' in navigator) {
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="procTitle">Processing Video</div>
     <div class="proc-step" id="procSub">Initializing FFmpeg...</div>
     <div class="proc-steps-list" id="procSteps"></div>
+
+    <div id="procLivePreview" style="display:none;margin:14px 0 0;border-radius:8px;overflow:hidden;background:#0a0a0f;position:relative;min-height:90px;border:1px solid rgba(124,92,252,0.25)">
+      <div style="position:absolute;top:6px;left:6px;z-index:2;background:rgba(239,68,68,0.9);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.5px;pointer-events:none">⬤ REC</div>
+    </div>
+
     <div style="margin-top:20px">
       <div class="progress-track"><div class="progress-fill" id="procProgress" style="width:0%"></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:8px">

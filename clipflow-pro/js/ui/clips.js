@@ -116,7 +116,8 @@ export const clipsUI = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `clip_${clip.id}_${formatTime(clip.startTime).replace(':', 'm')}s.mp4`;
+    const ext = blob.type.includes('webm') ? 'webm' : blob.type.includes('ogg') ? 'ogg' : 'mp4';
+    a.download = `clip_${clip.id}_${formatTime(clip.startTime).replace(':', 'm')}s.${ext}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   },
