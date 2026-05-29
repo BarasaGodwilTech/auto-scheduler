@@ -106,7 +106,7 @@ export class ClipGenerator {
   }
 
   async generateClips(uploadId, videoBlob, candidates, options = {}) {
-    const { onProgress = null, reEncode = false, overlayOptions = {}, aspectRatio = 'original' } = options;
+    const { onProgress = null, reEncode = false, overlayOptions = {}, aspectRatio = 'original', bgm = null, originalVolume = 1 } = options;
     const results = [];
     const total = candidates.length;
 
@@ -118,7 +118,7 @@ export class ClipGenerator {
           if (onProgress) onProgress({ phase: 'extracting', clipIndex: i, total, pct });
         };
         const clipBlob = await videoProcessor.extractClipWithReencode(videoBlob, c.start, c.duration);
-        await this._saveClip(uploadId, clipBlob, c, i, results);
+        await this._saveClip(uploadId, clipBlob, c, i, results, overlayOptions, null, aspectRatio);
         if (onProgress) onProgress({ phase: 'extracting', clipIndex: i, total, pct: 100 });
       }
       videoProcessor.onProgress = null;
@@ -126,29 +126,43 @@ export class ClipGenerator {
       if (onProgress) onProgress({ phase: 'extracting', clipIndex: 0, total, pct: 0 });
 
       let currentClipIndex = 0;
+      const savePromises = [];
       videoProcessor.onProgress = (pct) => {
         if (onProgress) onProgress({ phase: 'extracting', clipIndex: currentClipIndex, total, pct });
       };
 
-      const blobs = await videoProcessor.extractClipsBatch(
+      const segs = candidates.map((c, idx) => ({
+        start: c.start,
+        duration: c.duration,
+        overlayOptions: { ...overlayOptions, partNumber: overlayOptions.partNumber + idx },
+        aspectRatio,
+        audioOptions: bgm ? { bgm, originalVolume, restartAtClipStart: true } : null,
+      }));
+
+      await videoProcessor.extractClipsBatch(
         videoBlob,
-        candidates.map((c, idx) => ({ start: c.start, duration: c.duration, overlayOptions: { ...overlayOptions, partNumber: overlayOptions.partNumber + idx }, aspectRatio })),
-        (i) => {
+        segs,
+        (i, blob) => {
           currentClipIndex = i + 1;
+          if (blob) {
+            const c = candidates[i];
+            const segOv = segs[i]?.overlayOptions || overlayOptions;
+            const mix = bgm ? { bgm, originalVolume, restartAtClipStart: true } : null;
+            savePromises.push(this._saveClip(uploadId, blob, c, i, results, segOv, mix, aspectRatio));
+          }
           if (onProgress) onProgress({ phase: 'extracting', clipIndex: i, total, pct: 100 });
         }
       );
       videoProcessor.onProgress = null;
 
-      for (let i = 0; i < blobs.length; i++) {
-        if (blobs[i]) await this._saveClip(uploadId, blobs[i], candidates[i], i, results, overlayOptions);
-      }
+      // Ensure all immediate saves finished before returning
+      await Promise.all(savePromises);
     }
 
     return results;
   }
 
-  async _saveClip(uploadId, clipBlob, c, i, results, overlayOptions = {}) {
+  async _saveClip(uploadId, clipBlob, c, i, results, overlayOptions = {}, audioMix = null, aspectRatio = 'original') {
     const blobId = videoStore.generateId('clip');
     await videoStore.saveBlob(blobId, clipBlob, { clipIndex: i });
 
@@ -167,10 +181,23 @@ export class ClipGenerator {
         ? `Part ${overlayOptions.partNumber + i} (${formatTime(c.start)} \u2013 ${formatTime(c.start + c.duration)})`
         : `Clip ${i + 1} (${formatTime(c.start)} \u2013 ${formatTime(c.start + c.duration)})`,
       partNumber: (overlayOptions.partNumber != null) ? overlayOptions.partNumber + i : null,
+      overlayFormat: overlayOptions.format || 'none',
+      overlayStartSec: typeof overlayOptions.overlayStartSec === 'number' ? overlayOptions.overlayStartSec : 0,
+      aspectRatio,
+      // Audio mix metadata (optional)
+      bgmEnabled: !!(audioMix && audioMix.bgm),
+      bgmSource: audioMix?.bgm ? (audioMix.bgm.type === 'blob' ? { type: 'blob', blobId: audioMix.bgm.blobId } : { type: 'url', url: audioMix.bgm.url }) : null,
+      originalVolume: typeof audioMix?.originalVolume === 'number' ? audioMix.originalVolume : undefined,
+      bgmVolume: typeof audioMix?.bgm?.volume === 'number' ? audioMix.bgm.volume : undefined,
+      bgmRestart: !!audioMix?.restartAtClipStart,
     };
 
     const clipId = await db.put(STORES.CLIPS, record);
-    results.push({ id: clipId, blobId, ...record });
+    const saved = { id: clipId, blobId, ...record };
+    results.push(saved);
+    try {
+      window.dispatchEvent(new CustomEvent('clip:saved', { detail: saved }));
+    } catch {}
   }
 
   async processUpload(uploadId, onProgress = null, options = {}) {
@@ -182,6 +209,8 @@ export class ClipGenerator {
       seriesStartPart = 1,
       overlayFormat = 'part-text',
       aspectRatio = 'original',
+      bgm = null,
+      originalVolume = 1,
     } = options;
 
     this.MAX_CLIPS = maxClips;
@@ -229,6 +258,8 @@ export class ClipGenerator {
       reEncode,
       overlayOptions,
       aspectRatio,
+      bgm,
+      originalVolume,
       onProgress: (p) => {
         const total = candidates.length || 1;
         const clipsDone = (p.clipIndex || 0) + Math.min((p.pct || 0) / 100, 1);

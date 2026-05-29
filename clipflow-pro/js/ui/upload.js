@@ -36,6 +36,34 @@ export const uploadUI = {
     if (processBtn) processBtn.addEventListener('click', () => this.startProcessing());
   },
 
+  // Allow processing to continue while modal is hidden
+  runInBackground() {
+    const modal = document.getElementById('procModal');
+    if (modal) modal.classList.remove('show');
+    const badge = document.getElementById('bgProcBadge');
+    if (badge) badge.style.display = 'inline-flex';
+  },
+
+  // Soft-cancel UI: prompt user; processing continues or modal closes. Does not touch pipeline.
+  cancelOrClose() {
+    const confirmCancel = confirm('Do you want to cancel processing? You can keep already processed clips.');
+    if (confirmCancel) {
+      const keep = confirm('Keep clips that are already processed?');
+      // Clips already saved are persisted; we simply hide the modal either way.
+      const modal = document.getElementById('procModal');
+      if (modal) modal.classList.remove('show');
+      const badge = document.getElementById('bgProcBadge');
+      if (badge) badge.style.display = 'none';
+    }
+  },
+
+  reopenModal() {
+    const modal = document.getElementById('procModal');
+    if (modal) modal.classList.add('show');
+    const badge = document.getElementById('bgProcBadge');
+    if (badge) badge.style.display = 'none';
+  },
+
   handleFile(file) {
     this.currentFile = file;
     const zone = document.getElementById('uploadZone');
@@ -71,6 +99,8 @@ export const uploadUI = {
 
     this.isProcessing = true;
     this.showModal();
+    const badge = document.getElementById('bgProcBadge');
+    if (badge) badge.style.display = 'none';
 
     try {
       this.setModalStep('Saving video to storage...', 2);
@@ -86,6 +116,23 @@ export const uploadUI = {
       const seriesStartPart = parseInt(document.getElementById('seriesStartPart')?.value || '1');
       const overlayFormat = document.getElementById('overlayFormat')?.value || 'part-text';
       const aspectRatio = document.getElementById('aspectRatio')?.value || '9:16';
+      // Optional audio mix (only applied when BGM provided)
+      const bgmUrl = (document.getElementById('bgmUrl')?.value || '').trim();
+      const bgmFileEl = document.getElementById('bgmFile');
+      const bgmFile = bgmFileEl && bgmFileEl.files && bgmFileEl.files[0] ? bgmFileEl.files[0] : null;
+      const ovPct = parseInt(document.getElementById('origVolume')?.value || '100');
+      const originalVolume = Math.max(0, Math.min(1, ovPct / 100));
+      const bvPct = parseInt(document.getElementById('bgmVolume')?.value || '25');
+      const bgmVolume = Math.max(0, Math.min(1, bvPct / 100));
+
+      let bgm = null;
+      if (bgmFile) {
+        const id = videoStore.generateId('bgm');
+        await videoStore.saveBlob(id, bgmFile, { name: bgmFile.name, type: bgmFile.type || 'audio' });
+        bgm = { type: 'blob', blobId: id, volume: bgmVolume, loop: true };
+      } else if (bgmUrl) {
+        bgm = { type: 'url', url: bgmUrl, volume: bgmVolume, loop: true };
+      }
 
       await clipGenerator.processUpload(
         upload.id,
@@ -106,10 +153,11 @@ export const uploadUI = {
             this.setModalProgress(100, `${progress.clips?.length || 0} clips ready!`);
           }
         },
-        { targetDuration, maxClips, reEncode, seriesMode, seriesStartPart, overlayFormat, aspectRatio }
+        { targetDuration, maxClips, reEncode, seriesMode, seriesStartPart, overlayFormat, aspectRatio, bgm, originalVolume }
       );
 
       this.hideModal();
+      const b = document.getElementById('bgProcBadge'); if (b) b.style.display = 'none';
       notify.success('Clips generated successfully!');
       window.app?.navigate('clips');
     } catch (err) {
@@ -188,3 +236,6 @@ export const uploadUI = {
     }).join('');
   },
 };
+
+// Expose for inline handlers in index.html (Run in background / Cancel / Reopen)
+try { window.uploadUI = uploadUI; } catch {}

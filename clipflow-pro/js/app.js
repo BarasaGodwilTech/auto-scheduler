@@ -25,14 +25,60 @@ const PAGE_TITLES = {
 class ClipFlowApp {
   constructor() {
     this.currentView = 'dashboard';
+    this.compatOk = true;
+  }
+
+  initAudioPreviews() {
+    // Helper function to bind audio preview logic
+    const bindPreview = (urlId, fileId, previewId) => {
+      const urlEl = document.getElementById(urlId);
+      const fileEl = document.getElementById(fileId);
+      const previewEl = document.getElementById(previewId);
+      if (!urlEl || !fileEl || !previewEl) return;
+
+      const updatePreview = () => {
+        if (fileEl.files && fileEl.files[0]) {
+          // File takes precedence
+          previewEl.src = URL.createObjectURL(fileEl.files[0]);
+          previewEl.style.display = 'block';
+        } else if (urlEl.value.trim()) {
+          // URL fallback (with proxy for TikTok/YouTube)
+          let srcUrl = urlEl.value.trim();
+          if (srcUrl.match(/tiktok\.com|youtube\.com|youtu\.be/i)) {
+            srcUrl = `http://localhost:3000/api/audio?url=${encodeURIComponent(srcUrl)}`;
+          }
+          previewEl.src = srcUrl;
+          previewEl.style.display = 'block';
+        } else {
+          // Nothing
+          previewEl.src = '';
+          previewEl.style.display = 'none';
+        }
+
+        // Auto-apply current volume to the player
+        const isMixModal = previewId === 'mixBgmPreview';
+        const volEl = document.getElementById(isMixModal ? 'mixBgmVol' : 'bgmVolume');
+        if (volEl && previewEl.src) {
+          previewEl.volume = Math.max(0, Math.min(1, parseInt(volEl.value || '25', 10) / 100));
+        }
+      };
+
+      urlEl.addEventListener('input', updatePreview);
+      fileEl.addEventListener('change', updatePreview);
+    };
+
+    bindPreview('bgmUrl', 'bgmFile', 'bgmPreview');
+    bindPreview('mixBgmUrl', 'mixBgmFile', 'mixBgmPreview');
   }
 
   async init() {
     await db.open();
+    this.compatOk = this.checkCompatibility();
     this.setupNavigation();
     this.setupScheduleModal();
     this.setupSettingsTabs();
     this.setupPreviewModal();
+    this.initAudioPreviews();
     uploadUI.init();
 
     cronEngine.registerPlatform('tiktok', tiktokAPI);
@@ -63,6 +109,54 @@ class ClipFlowApp {
 
     window.app = this;
     console.log('[ClipFlow] App initialized');
+  }
+
+  checkCompatibility() {
+    const issues = [];
+    try {
+      if (typeof MediaRecorder === 'undefined') {
+        issues.push('MediaRecorder API is not available');
+      }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) {
+        issues.push('Web Audio API (AudioContext) is not available');
+      }
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const hasCanvasCapture = typeof canvas.captureStream === 'function';
+      const hasVideoCapture = typeof video.captureStream === 'function' || typeof video.mozCaptureStream === 'function';
+      if (!hasCanvasCapture || !hasVideoCapture) {
+        issues.push('captureStream() is not supported on video/canvas elements');
+      }
+    } catch (e) {
+      issues.push('Environment error while checking capabilities');
+    }
+
+    if (issues.length === 0) return true;
+
+    console.warn('[ClipFlow] Incompatible browser for clip generation:', issues.join('; '));
+    try {
+      notify.error('Your browser cannot generate clips reliably. Please use the latest Chrome, Edge, or Firefox.');
+    } catch {}
+
+    try {
+      const processBtn = document.getElementById('processBtn');
+      if (processBtn) {
+        processBtn.disabled = true;
+        processBtn.title = 'Browser not supported for clip generation';
+        processBtn.style.opacity = '0.5';
+      }
+      const uploadZone = document.getElementById('uploadZone');
+      if (uploadZone && !document.getElementById('uploadCompatWarning')) {
+        const note = document.createElement('div');
+        note.id = 'uploadCompatWarning';
+        note.style.cssText = 'margin-top:8px;font-size:12px;color:var(--danger, #b00020);';
+        note.textContent = 'Clip generation is not supported in this browser. Try the latest Chrome, Edge, or Firefox.';
+        uploadZone.appendChild(note);
+      }
+    } catch {}
+
+    return false;
   }
 
   navigate(view, triggerEl = null) {

@@ -1,0 +1,11 @@
+{
+  "name": "clipflow-backend",
+  "version": "1.0.0",
+  "description": "Backend for extracting audio from TikTok/YouTube",
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "youtube-dl-exec": "^3.1.7"
+  }
+}
